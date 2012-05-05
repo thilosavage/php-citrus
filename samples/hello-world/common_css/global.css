@@ -1,0 +1,20 @@
+body {
+	margin: 50px;
+	color: black;
+	font-family: arial;
+	font-size: 22px;
+}
+.fakelink {
+	text-decoration: underline;
+	cursor:pointer;cursor:hand; 
+}
+.hand {
+	cursor: pointer; cursor: hand;
+}
+
+.box {
+	border: 1px solid black;
+	position: relative;
+	padding: 0 20px;
+	margin: 10px;
+}

@@ -1,0 +1,11 @@
+.lightbox-title {
+	background-color: black;
+	color: white;
+}
+
+.lightbox-close-x {
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	color: white;
+}
