@@ -5,6 +5,6 @@
 		<?php inc::css('common.css.php')	;?>
 	</head>
 	<body>
-	<div id='message'>Loading...</div>
+		<div id='message'>Loading..</div>
 	</body>
 </html>

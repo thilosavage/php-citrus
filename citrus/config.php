@@ -1,70 +1,139 @@
-<?php
+<?php  if (!isset($_SESSION)) exit();
+/**
+ *	Configuration
+ * 
+ *	Note: Citrus and all examples should run without any configuring
+ */
 
-// default configuration
-$CR_DB['url'] = 'localhost';
-$CR_DB['user'] = 'root';
-$CR_DB['pass'] = '';
-$CR_DB['name'] = 'citrus';
+ //	the path of your server root to the application folder
+$cr_root = str_replace('\\','/',realpath(__DIR__)).'/';
 
-$CR_CONFIG['admin'] = 'admin';
+//	the path FROM your server root to the application folder
+$cr_path = str_replace($_SERVER['DOCUMENT_ROOT'],'',$cr_root);
 
-$CR_CONFIG['pass'] = '123';
+// the base URL of the app
+$cr_url = 'http://'.str_replace('//','/',$_SERVER['HTTP_HOST'].$cr_path);
 
-$CR_CONFIG['homepage'] = 'home';
+ 
+ /**
+  *	Configurations
+  *
+ * You can create custom config arrays for each environment of your application. 
+  * For example, your localhost and production environments may have different user/pass
+  * If a configuration value is the same on all instances, put it in the DEFAULT array
+  */
+$CR_CONFIGS = array(
+	
+	// configuration default values
+	'DEFAULT' => array(
+		
+		// all constants defined in this array will be prefixed with CR_
+		'CR' =>array(
+			
+			// CR_HOMEPAGE wil be defined as 'home'
+			'HOMEPAGE' => 'home',
+			
+			'ROOT' => $cr_root,
+			'PATH' => $cr_path,
+			'URL' => $cr_url,
+			
+			// in case you use something other than MySQL
+			'DATABASE' => 'mysql',
+			
+			// error reporting is all by default
+			'ERROR_REPORTING' => 'E_ALL'
+		),
+		'MYSQL' => array(
+		
+			// MYSQL_URL will be defined as 'localhost'
+			'URL' => 'localhost'
+		)
+	),
+	
+	// config for your localhost
+	'LOCAL' => array(
+		'CR' => array(
+			// Defaults can be overwritten
+			//'ROOT' => '/home/user/sites/myapps/app'
+		),
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+		),
+		'ADMIN' => array(
+			'USER' => 'admin',
+			'PASS' => 'asdf1234'
+		),
+	),
+	
+	// config for your production instance
+	'PRODUCTION' => array(
+		'CR' => array(
+			
+			// turn off error reporting for production
+			'ERROR_REPORTING' => 'E_NONE'
+		),
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+			'URL' => 'localhost'
+		),
+		'ADMIN' => array(
+			'USER' => 'admin',
+			'PASS' => 'asdf1234'
+		),
+	),
+	
+	// you may add configurations for additional instances of the app,
+	// but be sure to tell when to use this instance below
+	/*
+	'DEVELOPMENT' = array(
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+			'URL' => 'localhost'
+		),		
+	)
+	*/
+);
 
-error_reporting(E_STRICT);
 
-if ($_SERVER['HTTP_HOST'] == 'localhost') {
-	$CR_CONFIG['mode'] = 'dev';
-	error_reporting(E_ALL);
+
+/**
+ *	Use instance
+ *
+ * By default Citrus uses production configuration unless the URL is localhost
+ * because often times someone may not have a local server
+ */
+if ($_SERVER['HTTP_HOST'] == 'localhost')
+{
+	$USE_CONFIG = 'LOCAL';
+	//error_reporting(E_STRICT);
+	
 }
-else {
-	$CR_DB['server'] = 'localhost';
-	$CR_DB['name'] = 'root';
-	$CR_DB['pass'] = 'pass';
-	$CR_CONFIG['pass'] = 'awegw!!e$g';
-	$CR_CONFIG['mode'] = 'live';
-	ini_set('display_errors', 0);
+// come up with your own way to point Citrus to the proper config
+// for example, if my dev server will always have "dev" as the sub domain -
+/*
+else if (preg_match("/dev\./i",$_SERVER['SERVER_NAME'])) {
+	$USE_CONFIG = 'DEVELOPMENT;
 }
-	
-// create the site constants
-// site::url  			URL of the site
-// site::root 			site root
-// site::img			image root
-$d = "\$_CONFIG = preg_replace(\"/\/public\/([a-zA-Z\/.]*)/\",\"\",\$_SERVER['SCRIPT_FILENAME']);";;
-eval($d);
-$_ROOT = str_replace('index.php','',$_CONFIG).'/';
-$_ROOT = str_replace('//','/',$_ROOT);
-$_SCR= str_replace($_SERVER['DOCUMENT_ROOT'],'',$_ROOT);
-$_HOST = "http://".str_replace('//','/',$_SERVER['HTTP_HOST'].$_SCR);
+*/
+else
+{
+	$USE_CONFIG = 'PRODUCTION';
+}
 
-$def = "class site { const root = '".$_ROOT."';\n";
-$def .= "const url = '".$_HOST."';";
-$def .= "const img = '".$_HOST."images/';";
-$def .= "const homepage = '".$CR_CONFIG['homepage']."';";
-$def .= "const admin = '".$CR_CONFIG['admin']."';";
-$def .= "const pass = '".$CR_CONFIG['pass']."';";
-$def .= "const mode = '".$CR_CONFIG['mode']."';";
-$def .= "const db_url = '".$CR_DB['url']."';";
-$def .= "const db_user = '".$CR_DB['user']."';";
-$def .= "const db_pass = '".$CR_DB['pass']."';";
-$def .= "const db_name = '".$CR_DB['name']."';";
 
-$def .= "}";
-eval($def);
+// folders to be searched by autoload
+$_AUTOLOAD = array(
+	"core/",
+	"seeds/php/",
+	"models/",
+	"modules/"
+);
 
-/**********************************************
-	
-	Folders to be auto-loaded
-	Never require classes anymore
-	
-	
-**********************************************/
-
-$_AUTOLOAD[] = "helper_php/";
-$_AUTOLOAD[] = "core/";
-$_AUTOLOAD[] = "models/";
-$_AUTOLOAD[] = "modules/";
-require_once(site::root.'core/__autoload.php');
-
-?>
+// End of file
+// config.php

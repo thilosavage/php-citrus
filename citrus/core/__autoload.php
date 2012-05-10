@@ -1,69 +1,60 @@
 <?php
-/**********************************************
-
-	Automatically require classes
-	
-	You don't have to require_once to instantiate
-	an object. Just instantiate/reference the class
-	
-	If you're ever typing require_once(a_class_file.php);
-	You are adding unnecessary effort
-	
-	The autoload wil only scan folders in the $_AUTOLOAD array
-	
-	To add folders to this array
-	go into Application/config.php
-	
-**********************************************/
-function __autoload($class_name) {
-	global $_AUTOLOAD, $ROOT;
+/**
+ * Autoload
+ *
+ *	The directories for autoloading are set in /config.php
+ *
+ *	If a class is not found, it gives the option to create a
+ *	model and db table for the class
+ */
+ 
+function __autoload($class_name)
+{	
+	global $_AUTOLOAD;
 	$found = false;
 	foreach ($_AUTOLOAD as $directory){
-		
+
+			
+		/**
+		 * Search in the modules folders for a Controller
+		 *
+		 */
 		$tmp = $class_name;
 		if (strpos($class_name,'Controller')) {
-			
 			$srt = strtolower(str_replace('Controller','',$class_name));
-			
 			$tmp = $srt."/".$srt."Controller";
-			
 		}
-		
-		if (file_exists(site::root.$directory.$tmp.'.php')){
-			require_once site::root.$directory.$tmp .'.php';
+
+		/**
+		 * Standard autoloading
+		 *
+		 */
+		if (file_exists(CR_ROOT.$directory.$tmp.'.php')){
+			require_once CR_ROOT.$directory.$tmp .'.php';
 			$found = true;
 			break;
 		}
 	}
-	
-	if (!$found && $class_name == ucwords($class_name)) {
-		
-		$db = database::db();
-		
-		$tableName = strtolower($class_name);
-		
-		if(! mysql_num_rows( mysql_query("SHOW TABLES LIKE '".$tableName."'"))) {
-			$db->query("CREATE TABLE `citrus`.`".$tableName."` (
-			`".$tableName."_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY
-			) ENGINE = MYISAM ; ");		
-		}		
-		
-		$modelFileData = "";
-		$modelFileData .= "<?php \n";
-		$modelFileData .= "class ".ucwords($class_name)." extends Model {\n";
-		$modelFileData .= "	protected \$table = '".$tableName."';\n";
-		$modelFileData .= "	protected \$id_field = '".$tableName."_id';\n";	
-		$modelFileData .= "}";
-		
-		$model_file = site::root."models/".$tableName.".php";
-		if (!file_exists($model_file)){
-			$file = fopen($model_file, 'w') or die("can't open file");
-			fwrite($file, $modelFileData);
-			fclose($file);
+
+	 // If a class is not found, offer to create it
+	if (!$found)
+	{
+		// button to create class has been clicked
+		if (isset($_POST['generateClass']))
+		{	
+			database::generate_table($class_name);
+			require_once CR_ROOT.'models/'.$class_name .'.php';		
 		}
-		
-		require_once site::root.'models/'.$class_name .'.php';
-		
+		else
+		{
+			// Offer to create model
+			$button = "Click here to create /models/".$class_name.".php and a table called ".strtolower($class_name);
+			$createModel = "<b>Citrus Error</b> - The class <em>".$class_name."</em> was not found.<p>";
+			$createModel .= "<form method='post'><input type='submit' name='generateClass' value='".$button."'></form></em>";
+				
+			throw new Exception($createModel);
+			exit;
+		}
 	}
 }
 ?>

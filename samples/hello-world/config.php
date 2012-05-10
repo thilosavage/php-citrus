@@ -1,70 +1,106 @@
 <?php
 
-// default configuration
-$CR_DB['url'] = 'localhost';
-$CR_DB['user'] = 'root';
-$CR_DB['pass'] = '';
-$CR_DB['name'] = 'citrus';
+/**
+ *	Config file
+ *
+ *	@author Thilo Savage
+ 
+ */
 
-$CR_CONFIG['admin'] = 'admin';
+ // Citrus guesses the root path and URI of your application
+$cr_root = str_replace('\\','/',realpath(dirname(__FILE__))).'/';
+$cr_path = str_replace($_SERVER['DOCUMENT_ROOT'],'',$cr_root);
+$cr_url = 'http://'.str_replace('//','/',$_SERVER['HTTP_HOST'].$cr_path);
 
-$CR_CONFIG['pass'] = '123';
+ 
+ /**
+  *	Configurations
+  *
+ * You can create custom config values for each instance of your application. 
+  * For example, the MySQL user/pass will be different on your localhost and remote server
+  * If a configuration value is the same on all instances, put it in the DEFAULT array
+  */
+$CR_CONFIGS = array(
+	
+	'DEFAULT' => array(
+		'CR' => array(
+			'HOMEPAGE' => 'home',
+			'ROOT' => $cr_root,
+			'PATH' => $cr_path,
+			'URL' => $cr_url,
+		),
+		'MYSQL' => array(
+			'URL' => 'localhost'
+		)
+	),
+	
+	// config for your localhost
+	'LOCAL' => array(
+		'CR' => array(
+			// Defaults can be overwritten
+			//'ROOT' => '/home/user/sites/myapps/app'
+		),
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+		),
+		'ADMIN' => array(
+			'USER' => 'admin',
+			'PASS' => 'asdf1234'
+		),
+	),
+	
+	// config for your remote instance
+	'REMOTE' => array(
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+			'URL' => 'localhost'
+		),
+		'ADMIN' => array(
+			'USER' => 'admin',
+			'PASS' => 'asdf1234'
+		),
+	),
+	
+	// you may add configurations for additional instances of the app,
+	// but be sure to tell when to use this instance below
+	/*
+	'DEV_SERVER' = array(
+		'MYSQL' => array(
+			'USER' => 'root',
+			'PASS' => '',
+			'NAME' => 'citrus',
+			'URL' => 'localhost'
+		),		
+	)
+	*/
+);
 
-$CR_CONFIG['homepage'] = 'home';
 
-error_reporting(E_STRICT);
 
+/**
+ *	Use instance
+ *
+ * By default Citrus uses REMOTE configuration unless the URL is localhost
+ */
 if ($_SERVER['HTTP_HOST'] == 'localhost') {
-	$CR_CONFIG['mode'] = 'dev';
+	$USE_CONFIG = 'LOCAL';
+	//error_reporting(E_STRICT);
 	error_reporting(E_ALL);
 }
+// come up with your own way to point Citrus to the proper config
+// for example, if my dev server will always have "dev" as the sub domain -
+/*
+else if (preg_match("/dev\./i",$_SERVER['SERVER_NAME'])) {
+	$USE_CONFIG = 'DEV_SERVER';
+}
+*/
 else {
-	$CR_DB['server'] = 'localhost';
-	$CR_DB['name'] = 'root';
-	$CR_DB['pass'] = 'pass';
-	$CR_CONFIG['pass'] = 'awegw!!e$g';
-	$CR_CONFIG['mode'] = 'live';
+	$USE_CONFIG = 'REMOTE';
 	ini_set('display_errors', 0);
 }
-	
-// create the site constants
-// site::url  			URL of the site
-// site::root 			site root
-// site::img			image root
-$d = "\$_CONFIG = preg_replace(\"/\/public\/([a-zA-Z\/.]*)/\",\"\",\$_SERVER['SCRIPT_FILENAME']);";;
-eval($d);
-$_ROOT = str_replace('index.php','',$_CONFIG).'/';
-$_ROOT = str_replace('//','/',$_ROOT);
-$_SCR= str_replace($_SERVER['DOCUMENT_ROOT'],'',$_ROOT);
-$_HOST = "http://".str_replace('//','/',$_SERVER['HTTP_HOST'].$_SCR);
 
-$def = "class site { const root = '".$_ROOT."';\n";
-$def .= "const url = '".$_HOST."';";
-$def .= "const img = '".$_HOST."images/';";
-$def .= "const homepage = '".$CR_CONFIG['homepage']."';";
-$def .= "const admin = '".$CR_CONFIG['admin']."';";
-$def .= "const pass = '".$CR_CONFIG['pass']."';";
-$def .= "const mode = '".$CR_CONFIG['mode']."';";
-$def .= "const db_url = '".$CR_DB['url']."';";
-$def .= "const db_user = '".$CR_DB['user']."';";
-$def .= "const db_pass = '".$CR_DB['pass']."';";
-$def .= "const db_name = '".$CR_DB['name']."';";
-
-$def .= "}";
-eval($def);
-
-/**********************************************
-	
-	Folders to be auto-loaded
-	Never require classes anymore
-	
-	
-**********************************************/
-
-$_AUTOLOAD[] = "helpers/";
-$_AUTOLOAD[] = "citrus/";
-$_AUTOLOAD[] = "models/";
-$_AUTOLOAD[] = "modules/";
-require_once(site::root.'citrus/__autoload.php');
-
-?>
+// eof

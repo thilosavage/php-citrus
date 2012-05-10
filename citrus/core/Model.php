@@ -1,27 +1,16 @@
 <?php
-/**********************************************
-
-	The model is your database layer
-	It deals with all the interactions with the database
-	
-	There are four types of interactions - C, R, U, and D
-	
-	This class handles all these things
-	
-	C - create - see the save() method
-	R - retrieve - see the load() method
-	U - update - also see the save() method
-	D - delete - see the delete method
-
-	Everything else is just helping these four things
-	
-**********************************************/
+/**
+ * Database methods are abstracted on the off-chance
+ * that anyone would ever use something other than MySQL
+ * The mysql driver is /seeds/php/mysql.php
+ */
 abstract class Model {
 
 	protected $id;
 	protected $table;
 	protected $name_field;
 	protected $id_field;
+	protected $db;
 	
 	/////////// $values ///////////
 	// an array of field specifiers for a query
@@ -138,6 +127,8 @@ abstract class Model {
 		// $exampleObj = new Example(array('bob,'jim'),'name');	
 	function __construct($values='', $id_field = ''){
 	
+		eval("\$this->db = ".CR_DATABASE."::db();");
+	
 		if ($values!==''){
 
 			if ($values == 'all') {
@@ -172,18 +163,21 @@ abstract class Model {
 		// $exampleobj->load(array(1,3,7));		
 	function load($values = ''){
 	
-		if ($values){
-		
-		
-			if ($values == 'all') {
-				$this->values = array($this->id_field.'>'=>'0');
-			}		
-			else if (is_array($values)){
+		if ($values)
+		{
+			if ($values == 'all') 
+			{
+				$this->values = array($this->id_field.'>'=>'0');		
+			}
+			else if (is_array($values))
+			{
 				$this->values = $values;
 			}
-			else {
+			else
+			{
 				$args = func_get_args();
-				foreach ($args as $arg){
+				foreach ($args as $arg)
+				{
 					$args[] = $arg;
 				}
 				$this->values = $args;			
@@ -191,32 +185,30 @@ abstract class Model {
 			$query = $this->_build();
 			$this->query = $query;
 		}
-		else if ($this->values){
+		else if ($this->values)
+		{
 			$query = $this->_build();
 			$this->query = $query;
 		}
-		else {
+		else
+		{
 			$query = $this->query;
 		}
 		
 		
-		if ($query){
-			$database = database::db();
+		if ($query)
+		{	
+			$q = $this->db->query($query);
 			
-			$q = $database->query($query);
-			
-			while ($row = mysql_fetch_assoc($q)){
-				
+			while ($row = mysql_fetch_assoc($q))
+			{	
 				$row_id = $row[$this->id_field];
 
-				if ($this->use_id_values) {
-				
+				if ($this->use_id_values)
 					$this->rows[$row_id] = $this->rowHandler($row);
-				}
-				else {
-					print_r($row);
+				else 
 					$this->rows[] = $this->rowHandler($row);
-				}
+				
 				$this->row = $this->rowHandler($row);
 			}
 		}
@@ -227,136 +219,163 @@ abstract class Model {
 		// $name = 'bob';
 		// $exampleObj = new Example;
 		// $example->custom('SELECT * FROM `people` WHERE `name` = %s', $bob);
-	function custom($query){
-
-		$database = database::db();
+	function custom($query)
+	{	
 		$args = func_get_args();
-		if (count($args) > 1){
+		if (count($args) > 1)
+		{
 			unset($args[0]);
 			$sprintfStr = '$escapedQuery = sprintf("'.$query.'", ';
 			$i = 1;
-			foreach ($args as $arg){
-				
-				if (count($args) !== $i){
+			foreach ($args as $arg)
+			{		
+				if (count($args) !== $i)
 					$sprintfStr .= $arg.', ';
-				}
-				else {
+				else
 					$sprintfStr .= $arg.');';
-				}
+					
 				$i++;
 			}
 			eval($sprintfStr);
 			$this->query = $escapedQuery;
 		}
-		else {
-			//$q = $database->query($query);
+		else
+		{
+			//$q = $this->db->query($query);
 			$this->query = $query;
 		}
 		
 		$this->load();
 	}
 	
-	// save to the table
-	// save is used for both inserting and updating
-	// if the id field is set, it will update. if not, it will insert
 	
-	// example -- this will update
-		// $exampleObj = new Example;
-		// $exampleObj->set['id'] = 3;
-		// $exampleObj->set['name'] = 'bob';
-		// $exampleObj->save();
+	/**
+	 *	Save data to the table
+	 *	For both inserting and updating
+	 *	if the id field is set, it will update. if not, it will insert
+	 *
+	 *	@arg		array		Data to populate
+	 *	@return	int		Insert ID	 
+	 *
+	 *	example -- this will update
+			$exampleObj = new Example;
+			$exampleObj->set['id'] = 3;
+			$exampleObj->set['name'] = 'bob';
+			$exampleObj->save();
 		
-	// example -- this will insert
-		// $exampleObj = new Example;
-		// $exampleObj->set['id'] = 3;
-		// $exampleObj->save();		
+	 *	example -- this will insert
+			$exampleObj = new Example;
+			$exampleObj->set['id'] = 3;
+			$exampleObj->save();		
 		
-	// example -- this will also update
-		// $exampleObj = new Example;
-		// $exampleObj->field = 'name';
-		// $exampleObj->set['name'] = 'tom';
-		// $exampleObj->set['something'] = 'blah';
-		// $exampleObj->save();
+	 *	example -- this will also update
+			$exampleObj = new Example;
+			$exampleObj->field = 'name';
+			$exampleObj->set['name'] = 'tom';
+			$exampleObj->set['something'] = 'blah';
+			$exampleObj->save();
 	
-	// you can save quick by passing the data array as an argument
-	// example -- inserts a new row with name as bob	
-		// $exampleObj = new Example;
-		// $exampleObj->save('name'=>'bob');		
-	function save($set=null){
-		if ($set){
-			if (is_array($set)){
+	 *	you can save quick by passing the data array as an argument
+	 *	example -- inserts a new row with name as bob	
+			$exampleObj = new Example;
+			$exampleObj->save('name'=>'bob');
+	*/
+	function save($set=null)
+	{
+
+		if ($set)
+		{
+			if (is_array($set))
 				$this->set = $set;
-			}
-			else {
+			else 
 				$this->set[$this->id_field] = $set;
-			}
 		}
+		
 		$id_field = $this->field?$this->field:$this->id_field;
-		if (!empty($this->set[$id_field])) {
+		
+		if (!empty($this->set[$id_field]))
+		{
 			$this->_update();
 			return $this->set[$this->id_field];
 		}
-		else {
+		else
+		{
 			$this->_insert();
-			return mysql_insert_id();
+			return $this->db->insert_id();
 		}
 	}
 	
-	// delete a row from the table
-	// example -- delete row where id field is 7
-		// $exampleObj = new Example;
-		// $exampelObj->delete(7);
-	// example -- delete row where name is bob
-		// $exampleObj = new Example;
-		// $exampleObj->field = 'name';
-		// $exampleObj->delete('bob');
-	function delete($value='') {
-		$database = database::db();
+
+	/**
+	 *	Delete a row from table
+	 *
+	 *	@arg 	int	Row ID to delete
+	 *
+	 *
+	 * example -- delete row where id field is 7
+			$exampleObj = new Example;
+			$exampelObj->delete(7);
+	 *	example -- delete row where name is bob
+			$exampleObj = new Example;
+			$exampleObj->field = 'name';
+			$exampleObj->delete('bob');
+	 */
+	function delete($value='')
+	{	
 		$id_field = $this->field?$this->field:$this->id_field;
 		$value = $value?$value:$this->set[$id_field];
 		$q = sprintf('DELETE FROM '.$this->_esc($this->table).' WHERE `'.$this->_esc($id_field).'`=%s',$this->_esc($value));
-		$database->query($q);
+		$this->db->query($q);
 	}
-	
-	// get the fields from the table
-	function getFields() {
-		$database = database::db();
-		$res = $database->query('SHOW COLUMNS FROM '.$this->table);
-		$fields = array ();
-		while ($row = @ mysql_fetch_object($res)) {
-			$fields[$row->Field] = $row->Type;
-		}
-		@mysql_free_result($res);
-		return $fields;
+		
+	/**
+	 * Get table fields
+	 *	@return	array		Table fields
+	 */
+	function getFields()
+	{
+		return $this->db->get_fields();
 	}
-	
-	// get all the rows from the table
-	function getAll(){
+
+	/**
+ 	 *	Load the entire table
+ 	 *	@return	array		Table data
+	 */
+	function getAll()
+	{
 		$this->values = array($this->id_field.'>'=>'0');
 		$this->load();
 		return $this->row;
 	}
-	
-	// load a row and return it as an array
-	function scaffoldInfo($id) {
+		
+	/**
+	 * Load a row
+	 *
+	 *	@arg		int		Row ID
+	 *	@return	array		Row data
+	 */
+	function scaffoldInfo($id)
+	{
 		$this->load($id);
 		return $this->row;
 	}
 
 	// truncate a table
-	function truncate(){
-		$database = database::db();
-		$database->query('TRUNCATE TABLE `'.$this->table.'`');
+	function truncate()
+	{
+		$this->db->truncate();
 	}
 	
 	// to be extended as a pre-processor for row handling
 	// all rows loaded from table will be ran through this
-	function rowHandler($row){
+	function rowHandler($row)
+	{
 		return $row;
 	}
 	
 	// clear the object
-	function clear(){
+	function clear()
+	{
 		$this->row = null;
 		$this->rows = array();
 		$this->query = '';
@@ -365,79 +384,92 @@ abstract class Model {
 	}
 	
 	
-	// build the query
-	function _build(){
+/**
+ * Build query
+ *
+ *	@return resource	SQL query
+ */
+	function _build()
+	{
 		$qe = '';
-		if (!$this->logic && is_array($this->values)){
+		if (!$this->logic && is_array($this->values))
+		{
 			$this->logic = 'OR';
-			while (list($fieldName,$fieldValue) = each($this->values)){
-				if (!is_numeric($fieldName)){
+			while (list($fieldName,$fieldValue) = each($this->values))
+			{
+				if (!is_numeric($fieldName))
 					$this->logic = 'AND';
-				}
+
 				$oldField = $fieldName;
 			}
 		}
 		$defaultField = $this->field ? $this->field : $this->id_field;
-		if (is_array($this->values)){
+		if (is_array($this->values))
+		{
 			$coun = count($this->values) - 1;
-			foreach ($this->values as $key => $value){
+			foreach ($this->values as $key => $value)
+			{
 				$field = $this->_esc(!is_numeric($key)?$key:$defaultField);
 				$qe .= $this->_esc($field)."='".$this->_esc($value)."'";
-				if ($coun>0) {
+				
+				if ($coun>0) 
 					$qe .= ' '.$this->_esc($this->logic).' ';
-				}
+
 				$coun = $coun - 1;
 			}
 			$q = "SELECT * FROM `".$this->_esc($this->table)."` WHERE ".$qe;
 		}
-		else {
+		else
+		{
 			$value = $this->_esc($this->values);
 			$field = $this->_esc($defaultField);
 			$q = "SELECT * FROM `".$this->table."` WHERE ".$defaultField." = ".$value;
 		}
-		if ($this->order_by){
+		if ($this->order_by)
 			$q .= ' ORDER BY '.$this->_esc($this->order_by);
-		}
 		
-		if ($this->limit){
+		if ($this->limit)
 			$q .= ' LIMIT '.$this->limit;
-		}
+		
 		$this->query = $q;
 
 		return $q;
 	}		
+	
 	// inserts row into database
-	function _insert() {
-		$database = database::db();
+	function _insert()
+	{	
 		$insert = 'INSERT INTO `'.$this->_esc($this->table).'` SET '.$this->_fields();
-		$database->query($insert);
-		
+		$this->db->query($insert);
 		$this->query = $insert;
-		
-		//return $ret;
 	}
 	
 	// updates row in database
-	function _update() {
-		$database = database::db();
+	function _update()
+	{	
 		$update = 'UPDATE `'.$this->table.'` SET '.$this->_fields();
 		$update .= sprintf(' WHERE '.$this->_esc($this->id_field).'=%s', $this->_esc($this->set[$this->id_field]));
-		$database->query($update);
+		$this->db->query($update);
 		$this->query = $update;
-		//return $ret;
 	}
 	
-	// generate sql fields
-	function _fields(){
+	/**
+	 * Generate field string
+	 *
+	 *	@return string	SQL fields and values
+	 */
+	function _fields()
+	{
 		$fields = '';
-		while (list ($fieldName, $fieldValue) = each($this->set)) {
-			if (!is_numeric($fieldName)){
-				if (!strcmp($fieldName, $this->id_field)) {
+		while (list ($fieldName, $fieldValue) = each($this->set))
+		{
+			if (!is_numeric($fieldName))
+			{
+				if (!strcmp($fieldName, $this->id_field))
 					continue;
-				}
-				if (!empty($fields)) {
+				if (!empty($fields)) 
 					$fields .= ', ';
-				}
+				
 				$fields .= sprintf('`'.$this->_esc($fieldName).'`=\'%s\'', $this->_esc($fieldValue));
 			}
 		}
@@ -445,8 +477,11 @@ abstract class Model {
 	}
 	
 	// escape strings
-	function _esc($val) {
-		return mysql_escape_string($val);
+	function _esc($val)
+	{
+		return $this->db->escape($val);
 	}	
 }
-?>
+
+// End of File
+// core/Model.php

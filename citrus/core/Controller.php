@@ -1,109 +1,107 @@
-<?php
-/**********************************************
+<?php  if (!isset($_SESSION)) exit();
 
-	All your controllers should extend Controller
-	
-**********************************************/
+/**
+ * Controller
+ *
+ */
+ 
 class Controller {
 
-	protected $controller;
-	protected $action;
+	private
+		$route,
+		$controller,
+		$id,
+		$page,
+		$args = array(),
+		
+		$vars = array();
 
-	var $route = '';
-	var $id = '';
-	var $arg = '';
-	var $vars = array();	
-	var $view = '';
-	var $layout = 'page';
+	/**
+	 * Constructor
+	 *
+	 *	@param	 array	Route elements
+	 *
+	 */	
+	public function __construct($route)
+	{
 	
-	public function __construct($route) {
-
-		$this->route = $route->full;
-		$this->controller = $route->controller;
-		$this->action = $route->action;
-		$this->id = $route->id;
-		$this->arg = $route->arg;
-
-		if ($route->arg == 'js') {
+		$this->route = $route;
 		
-			$memcache = new Memcache;
-			$memcache->connect('localhost', 11211) or die ("Could not connect");
-			
-			
-			
-			
-			exit;
 		
+		if ($this->route->arg == 'js')
+		{	
 			header("content-type: application/x-javascript");
-			echo render::js();
+			echo render::library('js');
 			exit;
 		}
-		else if ($route->arg == 'css') {
+		else if ($this->route->arg == 'css')
+		{
 			header("content-type: text/css");
-			echo render::css();
+			echo render::library('css');
 			exit;
 		}
-		
 	}      
 
 	// default page
-	public function index() {
-		$this->action = site::homepage;
+	public function index()
+	{
+		$this->route->action = CR_HOMEPAGE;
 	}
-	
-	public function run() {
-		if (substr($this->action,0,5) == "ajax_"){
-		$request = $_SERVER[ 'HTTP_X_REQUESTED_WITH' ];
-		if ($request == 'XMLHttpRequest' || site::debug) {
-				$this->layout = 'ajax';
-			}
-			else {
-				exit("<p>Access denied.</p>");
-			}
-		}
-		$this->_prepare();
-		
-		$this->{$this->action}($this->id);
+
+	/**
+	 * Run Action
+	 *
+	 */
+	public function run()
+	{
+		$this->_prepare();		
+		$this->{$this->route->action}($this->route->id);
 		$this->render_page();
 	}	
 	
-	// This is mostly to be used in extensions,
-	//  but you can put default _prepare stuff here
-	//  Also you can use this _prepare as well as
-	//  an extension by adding
-	//         self::_prepare();
-	//  within the extended method
-	function _prepare() {
+	/**
+	 * Execute code before action is run
+	 */
+	function _prepare()
+	{
 	}
 	
-	protected function render_page() {
-	
-		if ($this->vars) {
-			foreach ($this->vars as $_name => $_value) {
+	protected function render_page()
+	{
+		if ($this->vars)
+		{
+			foreach ($this->vars as $_name => $_value)
 				$$_name = $_value;
-			}		
 		}	
 	
-		$ajaxExt = $this->layout=='ajax'?'/ajax':'';
-		$path = site::root.'pages/'.$this->id.'.php';
+		$path = CR_ROOT.'pages/'.$this->route->id.'.php';
 	
-		if (file_exists($path)) {
+		if (file_exists($path))
 			include $path;
-		}		
 	}
-	
-	function session($key, $value = '') {
-		if ($value) $_SESSION[$key] = $value;
-		return isset($_SESSION[$key])?$_SESSION[$key]:false;
-	}
-	
-	function redirect($route) {
+
+	/**
+	 * Redirect
+	 *
+	 *	@param	string	URL to redirect
+	 */	
+	function redirect($route)
+	{
 		header('Location: '.site::url.$route);
 		exit;
 	}
-	
-	public function vars($name, $value) {
+
+	/**
+	 * Send vars to View
+	 *
+	 *	@param	string	Var name
+	 *	@param	string	Value
+	 */		
+	public function vars($name, $value)
+	{
 		$this->vars[$name] = $value;
 	}
 }
-?>
+
+// End of file
+// core/Controller.php
